@@ -1,0 +1,230 @@
+'use client';
+import React, { useEffect, useRef, useState } from 'react';
+import { archiveData } from '@/data/archiveData';
+
+export default function TechChronicles() {
+  const containerRef = useRef(null);
+  const [role, setRole] = useState('universal');
+  const [citizenInfo, setCitizenInfo] = useState(null);
+
+  useEffect(() => {
+    // Check for registered citizen periodically
+    const checkCitizen = async () => {
+      try {
+        const res = await fetch('/api/citizen');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.specialization) {
+            setRole(data.specialization);
+            setCitizenInfo(data);
+          }
+        }
+      } catch (e) {
+        console.error("Archive Link Failed", e);
+      }
+    };
+
+    checkCitizen();
+  }, []);
+
+  useEffect(() => {
+    const observerOptions = { threshold: 0.3 };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, observerOptions);
+
+    if (containerRef.current) {
+      const levels = containerRef.current.querySelectorAll('.chronicle-level');
+      levels.forEach(level => observer.observe(level));
+    }
+    return () => observer.disconnect();
+  }, [role]); // Re-observe when role changes
+
+  const milestones = archiveData[role] || archiveData.universal;
+
+  return (
+    <section id="chronicles" ref={containerRef} className="chronicles-container">
+      <div className="archive-header">
+        <div className="line" style={{ background: role !== 'universal' ? 'var(--neon-blue)' : '#444' }}></div>
+        <h2 className="neon-text-blue glitch" data-text={role.toUpperCase() + " ARCHIVE"}>
+          {role.toUpperCase()} ARCHIVE
+        </h2>
+        <div className="line" style={{ background: role !== 'universal' ? 'var(--neon-blue)' : '#444' }}></div>
+        <p className="subtitle">
+          {citizenInfo ? `ACCESSING UPLINK FOR CITIZEN: ${citizenInfo.codename}` : "THE GREAT LIBRARY OF UNIVERSAL INNOVATION"}
+        </p>
+      </div>
+
+      {milestones.map((m, i) => (
+        <div key={`${role}-${i}`} className="chronicle-level">
+          <div className="panel-wrap glass hologram">
+            <div className="archive-id">ENTRY: {m.id}</div>
+            <div
+              className="image-panel"
+              style={{ backgroundImage: `url(${m.image})` }}
+            >
+              <div className="era-tag" style={{ background: m.color }}>{m.era}</div>
+            </div>
+            <div className="content-panel">
+              <div className="source">OFFICIAL SOURCE: {m.source}</div>
+              <div className="label" style={{ color: m.color }}>MILESTONE Detected</div>
+              <h3 style={{ textShadow: `0 0 10px ${m.color}88` }}>{m.title}</h3>
+              <p>{m.desc}</p>
+              <div className="archive-footer">
+                <span className="timestamp">[{new Date().getFullYear()}.{String(new Date().getMonth() + 1).padStart(2, '0')}.{String(new Date().getDate()).padStart(2, '0')}]</span>
+                <span className="checksum">ACCESS LEVEL: {role === 'universal' ? 'PUBLIC' : 'OATH-BOUND'}</span>
+              </div>
+            </div>
+          </div>
+          <div className="scroll-hint">▼</div>
+        </div>
+      ))}
+
+      <style jsx>{`
+        .chronicles-container {
+          background: #000;
+          padding: 100px 0;
+          transition: background 1s ease;
+        }
+        .archive-header {
+          text-align: center;
+          margin-bottom: 120px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        .archive-header h2 {
+          font-size: 3.5rem;
+          letter-spacing: 15px;
+          margin: 20px 0;
+        }
+        .line {
+          width: 300px;
+          height: 1px;
+          opacity: 0.5;
+          transition: all 1s ease;
+        }
+        .subtitle {
+          font-size: 0.7rem;
+          color: #666;
+          letter-spacing: 5px;
+          text-transform: uppercase;
+        }
+        .chronicle-level {
+          height: 95vh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transform: translateY(100px);
+          transition: all 1.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+          position: relative;
+          padding: 0 40px;
+        }
+        .chronicle-level.visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        .panel-wrap {
+          display: flex;
+          max-width: 1200px;
+          width: 100%;
+          height: 600px;
+          padding: 0;
+          overflow: hidden;
+          box-shadow: 0 50px 100px rgba(0,0,0,0.8);
+          position: relative;
+        }
+        .archive-id {
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          font-family: monospace;
+          font-size: 0.6rem;
+          color: rgba(255,255,255,0.2);
+          z-index: 10;
+        }
+        .image-panel {
+          width: 60%;
+          background-size: cover;
+          background-position: center;
+          position: relative;
+          border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        .era-tag {
+          position: absolute;
+          bottom: 30px;
+          left: 30px;
+          padding: 8px 20px;
+          font-size: 0.8rem;
+          font-weight: 900;
+          color: #000;
+          letter-spacing: 2px;
+        }
+        .content-panel {
+          width: 40%;
+          padding: 60px;
+          background: rgba(8,8,8,0.95);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        .source {
+          font-size: 0.5rem;
+          color: #444;
+          margin-bottom: 40px;
+          letter-spacing: 1px;
+          font-family: monospace;
+        }
+        .label {
+          font-size: 0.6rem;
+          margin-bottom: 20px;
+          letter-spacing: 3px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+        h3 {
+          font-size: 2.2rem;
+          margin-bottom: 30px;
+          color: #fff;
+          letter-spacing: 3px;
+          font-weight: 900;
+        }
+        p {
+          color: #999;
+          line-height: 1.8;
+          font-size: 1.1rem;
+          margin-bottom: 40px;
+        }
+        .archive-footer {
+          margin-top: auto;
+          display: flex;
+          justify-content: space-between;
+          font-family: monospace;
+          font-size: 0.6rem;
+          color: #333;
+        }
+        .scroll-hint {
+          margin-top: 50px;
+          color: #222;
+          font-size: 1.5rem;
+          animation: bounce 3s infinite;
+        }
+        @keyframes bounce {
+          0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+          40% {transform: translateY(-15px);}
+          60% {transform: translateY(-7px);}
+        }
+        @media (max-width: 1000px) {
+          .panel-wrap { flex-direction: column; height: auto; }
+          .image-panel { width: 100%; height: 400px; }
+          .content-panel { width: 100%; padding: 40px; }
+          .chronicle-level { height: auto; margin-bottom: 150px; }
+        }
+      `}</style>
+    </section>
+  );
+}
