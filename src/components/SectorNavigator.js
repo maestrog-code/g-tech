@@ -5,11 +5,14 @@ const sectors = [
   { id: 'hero', label: 'VOID', color: '#00f2ff', icon: '◉' },
   { id: 'pulse', label: 'PULSE', color: '#00ff66', icon: '▲' },
   { id: 'timeline', label: 'CHRONOS', color: '#bc13fe', icon: '◈' },
-  { id: 'lab', label: 'LAB', color: '#ff00ea', icon: '⬡' },
+  { id: 'globe', label: 'ATLAS', color: '#bc13fe', icon: '🌐' },
   { id: 'chronicles', label: 'ARCHIVES', color: '#ff9d00', icon: '◼' },
+  { id: 'lab', label: 'LAB', color: '#ff00ea', icon: '⬡' },
   { id: 'forge', label: 'FORGE', color: '#ff6600', icon: '⚒' },
   { id: 'decoder', label: 'DECODE', color: '#ffcc00', icon: '⬛' },
   { id: 'cyberverse', label: 'VERSE', color: '#bc13fe', icon: '◆' },
+  { id: 'terminal', label: 'CLI', color: '#00ff41', icon: '⌨' },
+  { id: 'countdown', label: 'COUNTDOWN', color: '#00f2ff', icon: '⏰' },
   { id: 'identity', label: 'IDENTITY', color: '#00f2ff', icon: '⬟' },
 ];
 
@@ -25,6 +28,8 @@ export default function SectorNavigator() {
       if (sector) {
         document.documentElement.style.setProperty('--neon-blue', sector.color);
       }
+      // Fire nav event for SPEED_RUNNER achievement
+      window.dispatchEvent(new CustomEvent('gtech:nav'));
     }
   };
 

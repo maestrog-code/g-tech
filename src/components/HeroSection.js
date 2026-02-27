@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Hero3D from './Hero3D';
 
 const TAGLINES = [
@@ -15,7 +15,9 @@ export default function HeroSection() {
     const [displayText, setDisplayText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
     const [particles, setParticles] = useState([]);
+    const [burstParticles, setBurstParticles] = useState([]);
     const [mounted, setMounted] = useState(false);
+    const burstRef = useRef(null);
 
     // Typewriter effect
     useEffect(() => {
@@ -55,9 +57,27 @@ export default function HeroSection() {
         setParticles(ps);
     }, []);
 
-    const handleEnterClick = () => {
+    const handleEnterClick = (e) => {
+        // Particle burst from button
+        const rect = e.currentTarget.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const burst = Array.from({ length: 30 }, (_, i) => ({
+            id: i,
+            x: cx,
+            y: cy,
+            angle: (i / 30) * 360 + (Math.random() - 0.5) * 12,
+            speed: 80 + Math.random() * 140,
+            size: 3 + Math.random() * 5,
+            color: ['#00f2ff', '#bc13fe', '#ff00ea', '#00ff66', '#ff9d00'][i % 5],
+        }));
+        setBurstParticles(burst);
+        setTimeout(() => setBurstParticles([]), 800);
+
+        // Screen shake
         document.body.classList.add('screen-shake');
         setTimeout(() => document.body.classList.remove('screen-shake'), 400);
+
         const el = document.getElementById('chronicles');
         if (el) el.scrollIntoView({ behavior: 'smooth' });
     };
@@ -124,6 +144,35 @@ export default function HeroSection() {
                     </div>
                 </div>
             </div>
+
+            {/* Burst particles */}
+            {burstParticles.map(p => (
+                <div
+                    key={p.id}
+                    style={{
+                        position: 'fixed',
+                        left: p.x,
+                        top: p.y,
+                        width: p.size,
+                        height: p.size,
+                        borderRadius: '50%',
+                        background: p.color,
+                        boxShadow: `0 0 8px ${p.color}`,
+                        pointerEvents: 'none',
+                        zIndex: 99999,
+                        animation: `burst-fly-${p.id % 5} 0.7s ease-out forwards`,
+                        transform: `translate(-50%, -50%)`,
+                    }}
+                />
+            ))}
+
+            <style jsx>{`
+                @keyframes burst-fly-0 { to { transform: translate(calc(-50% + ${Math.cos(0) * 120}px), calc(-50% + ${Math.sin(0) * 120}px)) scale(0); opacity: 0; } }
+                @keyframes burst-fly-1 { to { transform: translate(calc(-50% + ${Math.cos(1.26) * 120}px), calc(-50% + ${Math.sin(1.26) * 120}px)) scale(0); opacity: 0; } }
+                @keyframes burst-fly-2 { to { transform: translate(calc(-50% + ${Math.cos(2.51) * 120}px), calc(-50% + ${Math.sin(2.51) * 120}px)) scale(0); opacity: 0; } }
+                @keyframes burst-fly-3 { to { transform: translate(calc(-50% + ${Math.cos(3.77) * 120}px), calc(-50% + ${Math.sin(3.77) * 120}px)) scale(0); opacity: 0; } }
+                @keyframes burst-fly-4 { to { transform: translate(calc(-50% + ${Math.cos(5.03) * 120}px), calc(-50% + ${Math.sin(5.03) * 120}px)) scale(0); opacity: 0; } }
+            `}</style>
 
             <style jsx>{`
                 .hero-container {

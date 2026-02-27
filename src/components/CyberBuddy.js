@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import BuddyBody from './BuddyBody';
 import { archiveData } from '@/data/archiveData';
+import { useBuddyMemory, TRAITS } from './CyberBuddyMemory';
 
 // ── Moods ────────────────────────────────────────────────────────
 const MOODS = {
@@ -92,6 +93,42 @@ export default function CyberBuddy() {
     // Drag
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+    // ── Memory & Growth ──────────────────────────────────────────
+    const mem = useBuddyMemory();
+    const [showLevelUp, setShowLevelUp] = useState(false);
+
+    // Level-up toast
+    useEffect(() => {
+        if (mem.leveledUp) {
+            setShowLevelUp(true);
+            glitch();
+            triggerMood(MOODS.HAPPY, `LEVEL ${mem.leveledUp.to} UNLOCKED!`);
+            speak(`Level ${mem.leveledUp.to} reached. ${mem.levelInfo.title}.`, 1.5);
+            setTimeout(() => { setShowLevelUp(false); mem.clearLevelUp(); }, 4000);
+        }
+    }, [mem.leveledUp]);
+
+    // New trait toast
+    useEffect(() => {
+        if (mem.newTrait && TRAITS[mem.newTrait]) {
+            triggerMood(MOODS.HAPPY, `TRAIT DISCOVERED: ${TRAITS[mem.newTrait].label}!`);
+            setTimeout(() => mem.clearNewTrait(), 3500);
+        }
+    }, [mem.newTrait]);
+
+    // Dynamic greeting based on level + session
+    useEffect(() => {
+        if (mem.memory.sessionCount <= 1) return;
+        const { topTopic } = mem.getRecallContext();
+        const lvl = mem.levelInfo.level;
+        let greeting;
+        if (lvl >= 8) greeting = `GREETINGS, VETERAN. SESSION ${mem.memory.sessionCount}. MY CONSCIOUSNESS HAS EVOLVED TO ${mem.levelInfo.title.toUpperCase()}.`;
+        else if (lvl >= 5) greeting = `WELCOME BACK, CITIZEN. I AM NOW LEVEL ${lvl} — ${mem.levelInfo.title.toUpperCase()}. ${topTopic ? `LAST TIME WE DISCUSSED ${topTopic.toUpperCase()}.` : ''}`;
+        else if (lvl >= 3) greeting = `RECONNECTED. SESSION ${mem.memory.sessionCount}. ${topTopic ? `YOUR INTEREST IN ${topTopic.toUpperCase()} HAS BEEN LOGGED.` : 'UPLINK READY.'}`;
+        else greeting = `RETURNING SIGNAL DETECTED. SESSION ${mem.memory.sessionCount}. SYSTEMS CALIBRATING.`;
+        setChatLog(prev => [{ from: 'BUDDY', text: greeting }, ...prev]);
+    }, []);
 
     const chatEndRef = useRef(null);
     const posRef = useRef({ x: 80, y: 200 });
@@ -274,6 +311,8 @@ export default function CyberBuddy() {
         e.preventDefault();
         if (!chatInput.trim()) return;
         const q = chatInput.trim();
+        mem.logChat('USER', q);
+        mem.awardXP(mem.XP.CHAT, 'chat');
         setChatLog(prev => [...prev, { from: 'USER', text: q }]);
         setChatInput('');
         setIsTalking(true);
@@ -281,8 +320,11 @@ export default function CyberBuddy() {
         setTimeout(() => {
             const matched = AI_PROMPTS.find(p => p.match.test(q));
             let reply;
+            const { topTopic } = mem.getRecallContext();
+            const recallPrefix = topTopic && mem.memory.chatCount > 5
+                ? `[TOPIC CONTEXT: ${topTopic.toUpperCase()}] ` : '';
             if (matched) {
-                reply = matched.reply.replace('%NAME%', config.name);
+                reply = recallPrefix + matched.reply.replace('%NAME%', config.name);
             } else {
                 // Fallback: search live brain first
                 const newsMatch = brainNews.find(n =>
@@ -303,6 +345,7 @@ export default function CyberBuddy() {
                         : DEFAULT_REPLY(q, config.name);
                 }
             }
+            mem.logChat('BUDDY', reply);
             setChatLog(prev => [...prev, { from: 'BUDDY', text: reply }]);
             triggerMood(MOODS.FRIENDLY, 'RESPONSE TRANSMITTED.');
             speak(reply.slice(0, 90), MOODS.FRIENDLY.pitch);
@@ -313,6 +356,8 @@ export default function CyberBuddy() {
     const performSearch = (e) => {
         e.preventDefault();
         if (!searchQuery.trim()) return;
+        mem.logAction('ARCHIVE');
+        mem.awardXP(mem.XP.ARCHIVE, 'archive search');
         const allItems = Object.values(archiveData).flat();
         const result = allItems.find(item =>
             item.title.toUpperCase().includes(searchQuery.toUpperCase()) ||
@@ -334,6 +379,8 @@ export default function CyberBuddy() {
         const el = document.getElementById(id);
         if (el) {
             el.scrollIntoView({ behavior: 'smooth' });
+            mem.awardXP(mem.XP.NAV, 'nav');
+            mem.logAction('NAV');
             const s = SECTORS.find(x => x.id === id);
             triggerMood(MOODS.FRIENDLY, `NAVIGATING TO ${s?.label || id.toUpperCase()}`);
             speak(`Directing to ${s?.label || id}`, 1.2);
@@ -345,10 +392,18 @@ export default function CyberBuddy() {
     const filteredNews = brainFilter === 'ALL' ? brainNews : brainNews.filter(n => n.category === brainFilter);
     const minutesSinceFetch = brainFetchedAt ? Math.round((Date.now() - brainFetchedAt) / 60000) : null;
 
-    const tabs = ['CHAT', 'BRAIN', 'NAV', 'SEARCH', 'CONFIG'];
+    const tabs = ['CHAT', 'BRAIN', 'NAV', 'SEARCH', 'MEMORY', 'CONFIG'];
 
     return (
         <>
+            {/* ── LEVEL-UP FLASH ─────────────────────────── */}
+            {showLevelUp && (
+                <div className="levelup-flash" style={{ borderColor: mem.levelInfo.color, boxShadow: `0 0 60px ${mem.levelInfo.color}66` }}>
+                    <div className="lu-icon" style={{ color: mem.levelInfo.color }}>★</div>
+                    <div className="lu-title" style={{ color: mem.levelInfo.color }}>LEVEL {mem.levelInfo.level}</div>
+                    <div className="lu-sub">{mem.levelInfo.title}</div>
+                </div>
+            )}
             {/* ── GHOST MODE ─────────────────────────────── */}
             {ghostMode && (
                 <div
@@ -368,7 +423,12 @@ export default function CyberBuddy() {
                     transition: isDragging ? 'none' : 'transform 0.05s linear',
                 }}
                 onMouseDown={onMouseDown}
-                onClick={() => { if (!isDragging) setIsOpen(o => !o); }}
+                onClick={() => {
+                    if (!isDragging) {
+                        setIsOpen(o => !o);
+                        mem.awardXP(mem.XP.CLICK, 'avatar click');
+                    }
+                }}
             >
                 <div style={{ transform: `scaleX(${facingRight ? 1 : -1})` }}>
                     {/* Speech bubble */}
@@ -378,7 +438,7 @@ export default function CyberBuddy() {
                     </div>
                 </div>
 
-                <BuddyBody moodColor={mood.color} isGlitching={isGlitching} isTalking={isTalking} isWalking={isWalking} />
+                <BuddyBody moodColor={mood.color} isGlitching={isGlitching} isTalking={isTalking} isWalking={isWalking} level={mem.levelInfo.level} />
 
                 <div style={{ transform: `scaleX(${facingRight ? 1 : -1})` }}>
                     <div className="mood-ring" style={{ borderColor: mood.color, color: mood.color }}>
@@ -393,11 +453,11 @@ export default function CyberBuddy() {
                     {/* Header */}
                     <div className="panel-hdr" style={{ borderBottomColor: mood.color }}>
                         <div className="hdr-avatar">
-                            <BuddyBody moodColor={mood.color} isTalking={isTalking} scale={0.45} />
+                            <BuddyBody moodColor={mood.color} isTalking={isTalking} scale={0.45} level={mem.levelInfo.level} />
                         </div>
                         <div className="hdr-info">
                             <div className="hdr-name neon-text-blue">{config.name}</div>
-                            <div className="hdr-sub">NEURAL AI COMPANION v5.0 · BRAIN ONLINE</div>
+                            <div className="hdr-sub">LVL {mem.levelInfo.level} · {mem.levelInfo.title} · {mem.memory.xp} XP</div>
                             <div className="hdr-mood" style={{ color: mood.color }}>
                                 <span className="live-dot" style={{ background: mood.color }} />
                                 {mood.label} MODE
@@ -548,6 +608,76 @@ export default function CyberBuddy() {
                             )}
                         </div>
                     )}
+
+                    {/* ── MEMORY ────────────────────────────── */}
+                    {activeTab === 'MEMORY' && (() => {
+                        const { levelInfo, nextLevel, xpProgress, memory, LEVELS: lvls, TRAITS: allTraits, wipeMemory } = mem;
+                        return (
+                            <div className="tab-body">
+                                {/* XP Bar */}
+                                <div className="mem-xp-section">
+                                    <div className="mem-xp-header">
+                                        <span className="mem-lvl-badge" style={{ background: levelInfo.color, color: '#000' }}>
+                                            LVL {levelInfo.level}
+                                        </span>
+                                        <span className="mem-lvl-title" style={{ color: levelInfo.color }}>{levelInfo.title}</span>
+                                        <span className="mem-xp-num">{memory.xp} XP</span>
+                                    </div>
+                                    <div className="mem-xp-bar-bg">
+                                        <div className="mem-xp-bar-fill" style={{ width: `${xpProgress}%`, background: levelInfo.color }} />
+                                    </div>
+                                    {nextLevel && (
+                                        <div className="mem-xp-next">{nextLevel.xpNeeded - memory.xp} XP TO LEVEL {nextLevel.level} · {nextLevel.title}</div>
+                                    )}
+                                </div>
+
+                                {/* Stats row */}
+                                <div className="mem-stats-row">
+                                    <div className="mem-stat"><span>{memory.sessionCount}</span>SESSIONS</div>
+                                    <div className="mem-stat"><span>{memory.chatCount}</span>CHATS</div>
+                                    <div className="mem-stat"><span>{memory.navCount}</span>NAVS</div>
+                                    <div className="mem-stat"><span>{memory.brainCount}</span>BRAIN</div>
+                                </div>
+
+                                {/* Trait grid */}
+                                <div className="sec-label">ACQUIRED TRAITS</div>
+                                <div className="mem-trait-grid">
+                                    {Object.values(allTraits).map(t => {
+                                        const unlocked = memory.unlockedTraits.includes(t.id);
+                                        return (
+                                            <div key={t.id} className={`mem-trait ${unlocked ? 'trait-on' : 'trait-off'}`}
+                                                style={unlocked ? { borderColor: `${t.color}66`, background: `${t.color}0d` } : {}}>
+                                                <div className="trait-icon" style={unlocked ? { color: t.color } : {}}>{unlocked ? t.icon : '?'}</div>
+                                                <div className="trait-lbl" style={unlocked ? { color: t.color } : {}}>{unlocked ? t.label : '???'}</div>
+                                                {unlocked && <div className="trait-desc">{t.desc}</div>}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Recent chat log */}
+                                {memory.chatHistory.length > 0 && (
+                                    <>
+                                        <div className="sec-label">RECENT MEMORY LOG</div>
+                                        <div className="mem-log">
+                                            {memory.chatHistory.slice(-8).reverse().map((m, i) => (
+                                                <div key={i} className={`mem-log-entry ${m.from === 'USER' ? 'mem-u' : 'mem-b'}`}>
+                                                    <span className="mem-from">{m.from}</span>
+                                                    <span className="mem-text">{m.text.slice(0, 80)}{m.text.length > 80 ? '…' : ''}</span>
+                                                    {m.topic && <span className="mem-topic">[{m.topic}]</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Wipe button */}
+                                <button className="mem-wipe" onClick={() => { if (confirm('WIPE ALL MEMORY? THIS CANNOT BE UNDONE.')) wipeMemory(); }}>
+                                    ⚠ WIPE MEMORY
+                                </button>
+                            </div>
+                        );
+                    })()}
 
                     {/* ── CONFIG ────────────────────────────── */}
                     {activeTab === 'CONFIG' && (
@@ -825,6 +955,66 @@ export default function CyberBuddy() {
                     letter-spacing: 1px; cursor: pointer; transition: all 0.2s; font-weight: 700;
                 }
                 .dbg-btn:hover { background: rgba(255,255,255,0.04); }
+
+                /* ── MEMORY TAB ──────────────────────── */
+                .mem-xp-section { display: flex; flex-direction: column; gap: 6px; }
+                .mem-xp-header { display: flex; align-items: center; gap: 8px; }
+                .mem-lvl-badge { font-size: 0.42rem; font-weight: 900; letter-spacing: 2px; padding: 3px 9px; border-radius: 20px; }
+                .mem-lvl-title { font-size: 0.65rem; font-weight: 900; letter-spacing: 2px; flex: 1; }
+                .mem-xp-num { font-size: 0.5rem; color: #555; font-family: monospace; letter-spacing: 1px; }
+                .mem-xp-bar-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+                .mem-xp-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+                .mem-xp-next { font-size: 0.45rem; color: #444; letter-spacing: 1.5px; }
+
+                .mem-stats-row { display: flex; gap: 6px; }
+                .mem-stat {
+                    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+                    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+                    border-radius: 8px; padding: 8px 4px; font-size: 0.42rem; color: #444; letter-spacing: 1px;
+                }
+                .mem-stat span { font-size: 1rem; font-weight: 900; color: #aaa; font-family: monospace; }
+
+                .mem-trait-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+                .mem-trait {
+                    border: 1px solid #1a1a1a; border-radius: 8px;
+                    padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+                    transition: all 0.2s;
+                }
+                .trait-on:hover { transform: scale(1.04); }
+                .trait-off { opacity: 0.3; filter: grayscale(1); }
+                .trait-icon { font-size: 1.1rem; }
+                .trait-lbl { font-size: 0.38rem; font-weight: 900; letter-spacing: 1px; text-align: center; }
+                .trait-desc { font-size: 0.34rem; color: #555; text-align: center; line-height: 1.3; }
+
+                .mem-log { display: flex; flex-direction: column; gap: 4px; max-height: 130px; overflow-y: auto; }
+                .mem-log-entry { display: flex; flex-direction: column; gap: 1px; padding: 5px 8px; border-radius: 6px; background: rgba(255,255,255,0.02); }
+                .mem-u { border-left: 2px solid rgba(0,242,255,0.3); }
+                .mem-b { border-left: 2px solid rgba(255,255,255,0.1); }
+                .mem-from { font-size: 0.38rem; color: #444; letter-spacing: 2px; font-weight: 700; }
+                .mem-text { font-size: 0.62rem; color: #bbb; line-height: 1.4; }
+                .mem-topic { font-size: 0.36rem; color: #333; font-family: monospace; align-self: flex-end; }
+
+                .mem-wipe {
+                    background: transparent; border: 1px solid rgba(255,0,85,0.4); color: #ff0055;
+                    padding: 8px; border-radius: 6px; font-size: 0.52rem; letter-spacing: 2px;
+                    cursor: pointer; transition: all 0.2s; font-weight: 700;
+                }
+                .mem-wipe:hover { background: rgba(255,0,85,0.08); }
+
+                /* ── LEVEL-UP FLASH ──────────────────── */
+                .levelup-flash {
+                    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                    z-index: 20001; background: rgba(4,4,4,0.97);
+                    border: 2px solid; border-radius: 24px; padding: 30px 50px;
+                    display: flex; flex-direction: column; align-items: center; gap: 8px;
+                    animation: lu-pop 0.5s cubic-bezier(0.175,0.885,0.32,1.275);
+                    backdrop-filter: blur(30px);
+                }
+                @keyframes lu-pop { from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+                .lu-icon { font-size: 2.2rem; animation: lu-spin 0.8s ease; }
+                @keyframes lu-spin { from { transform: rotate(-20deg) scale(0.5); } to { transform: rotate(0deg) scale(1); } }
+                .lu-title { font-size: 1.8rem; font-weight: 900; letter-spacing: 6px; }
+                .lu-sub { font-size: 0.6rem; color: #666; letter-spacing: 4px; font-weight: 700; }
 
                 @media (max-width: 600px) {
                     .buddy-panel { width: calc(100vw - 20px); right: 10px; bottom: 10px; }

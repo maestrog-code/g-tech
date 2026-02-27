@@ -2,19 +2,59 @@
 import { useState, useEffect, useRef } from 'react';
 
 const BOOT_LINES = [
-    '> INITIALIZING G-TECH NEURAL CORE v5.0...',
+    '> INITIALIZING G-TECH NEURAL CORE v6.0...',
     '> LOADING QUANTUM UPLINK PROTOCOLS...',
     '> SYNCING ARCHIVE DATABASE: 847 ENTRIES FOUND.',
     '> DEPLOYING CYBERBUDDY AGENT: OPEN_CLAW_X',
     '> CALIBRATING PARTICLE NETWORK: 80 NODES ACTIVE.',
+    '> CONNECTING TO LIVE CRYPTO FEED: 10 PAIRS ONLINE.',
+    '> LOCKING TECH ATLAS: 15 GLOBAL HUBS MAPPED.',
+    '> ACTIVATING NEURAL CLI: SHELL READY.',
     '> CONNECTING TO HACKER NEWS API FEED...',
-    '> ENABLING HOLO-SECTORS: ALL 9 ONLINE.',
+    '> ENABLING HOLO-SECTORS: ALL 12 ONLINE.',
     '> CITIZEN REGISTRY UPLINK READY.',
     '> SECURITY PROTOCOLS ENGAGED.',
     '> ALL SYSTEMS: ✓ — UPLINK ESTABLISHED.',
 ];
 
 const SKIP_KEY = 'gtech_booted_v3';
+const MATRIX_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZﾊﾐﾋｰｳｼﾅﾓﾆｻﾜｷﾑﾃｹﾒｴｶｷﾑﾃｸﾀｸﾁｺｿﾃﾐ@#$%&';
+
+function MatrixRain() {
+    const canvasRef = useRef(null);
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const cols = Math.floor(canvas.width / 18);
+        const drops = Array.from({ length: cols }, () => Math.random() * -50);
+        let running = true;
+        const draw = () => {
+            if (!running) return;
+            ctx.fillStyle = 'rgba(0,0,0,0.06)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.font = '14px Courier New';
+            drops.forEach((y, i) => {
+                const char = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
+                const x = i * 18;
+                // Head is bright white
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(char, x, y * 18);
+                // Trail fades green
+                ctx.fillStyle = y * 18 > canvas.height * 0.6 ? '#003300' : '#00ff41';
+                ctx.fillText(MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)], x, (y - 1) * 18);
+                if (drops[i] * 18 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                else drops[i] += 0.6;
+            });
+            requestAnimationFrame(draw);
+        };
+        draw();
+        return () => { running = false; };
+    }, []);
+    return <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, opacity: 0.18, pointerEvents: 'none' }} />;
+}
 
 export default function BootSequence() {
     const [phase, setPhase] = useState('LOGO');   // LOGO → LINES → DONE
@@ -22,6 +62,7 @@ export default function BootSequence() {
     const [progress, setProgress] = useState(0);
     const [visible, setVisible] = useState(true);
     const [logoOpacity, setLogoOpacity] = useState(0);
+    const [showMatrix, setShowMatrix] = useState(false);
     const hasBooted = useRef(false);
 
     useEffect(() => {
@@ -31,6 +72,7 @@ export default function BootSequence() {
             return;
         }
         sessionStorage.setItem(SKIP_KEY, '1');
+        setShowMatrix(true);
 
         let raf;
         // Phase 1 — Logo fade in
@@ -78,6 +120,9 @@ export default function BootSequence() {
 
     return (
         <div className={`boot-overlay ${phase === 'DISSOLVE' ? 'dissolve' : ''}`}>
+            {/* Matrix Rain Background */}
+            {showMatrix && <MatrixRain />}
+
             {/* Scanline effect */}
             <div className="boot-scanlines" />
 

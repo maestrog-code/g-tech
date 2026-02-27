@@ -12,7 +12,19 @@ export const ACHIEVEMENTS = {
     CITIZEN_ZERO: { id: 'CITIZEN_ZERO', title: 'CITIZEN ZERO', desc: 'Registered a Citizen Identity.', icon: '⬟', color: '#00f2ff' },
     BRAIN_ONLINE: { id: 'BRAIN_ONLINE', title: 'BRAIN ONLINE', desc: 'Accessed the Live Tech Feed.', icon: '🧠', color: '#00ff66' },
     PULSE_READER: { id: 'PULSE_READER', title: 'PULSE READER', desc: 'Watched the Tech Pulse metrics.', icon: '▲', color: '#00ff66' },
-    FULL_CITIZEN: { id: 'FULL_CITIZEN', title: 'FULL CITIZEN', desc: 'Unlocked 5 or more achievements.', icon: '★', color: '#ffcc00' },
+    // Wave 1 achievements
+    TERMINAL_HAX: { id: 'TERMINAL_HAX', title: 'TERMINAL HAX', desc: 'Launched the Neural Command Interface.', icon: '⌨', color: '#00ff41' },
+    GLOBE_TROTTER: { id: 'GLOBE_TROTTER', title: 'GLOBE TROTTER', desc: 'Explored a tech hub on the Tech Atlas.', icon: '🌐', color: '#bc13fe' },
+    CRYPTO_WATCHER: { id: 'CRYPTO_WATCHER', title: 'CRYPTO WATCHER', desc: 'Watched the Crypto Ticker for 30s.', icon: '₿', color: '#ff9d00' },
+    SPEED_RUNNER: { id: 'SPEED_RUNNER', title: 'SPEED RUNNER', desc: 'Visited 3+ sectors in under 60 seconds.', icon: '⚡', color: '#ff0055' },
+    NIGHT_OWL: { id: 'NIGHT_OWL', title: 'NIGHT OWL', desc: 'Visited G-Tech after midnight local time.', icon: '🦉', color: '#aaaaff' },
+    // Wave 2 achievements
+    MOOD_READER: { id: 'MOOD_READER', title: 'MOOD READER', desc: 'Clicked the ambient Mood Orb.', icon: '🎭', color: '#ff00ea' },
+    DATA_RUNNER: { id: 'DATA_RUNNER', title: 'DATA RUNNER', desc: 'Intercepted the live data stream for 10s.', icon: '🔢', color: '#00f2ff' },
+    ECHO_CHAMBER: { id: 'ECHO_CHAMBER', title: 'ECHO CHAMBER', desc: 'Used the echo command in the Neural CLI.', icon: '📡', color: '#bc13fe' },
+    DARK_MATTER: { id: 'DARK_MATTER', title: 'DARK MATTER', desc: 'Visited G-Tech with a dark system theme.', icon: '🕳', color: '#440066' },
+    SECTOR_GOD: { id: 'SECTOR_GOD', title: 'SECTOR GOD', desc: 'Visited every sector in one session.', icon: '👁', color: '#ffcc00' },
+    FULL_CITIZEN: { id: 'FULL_CITIZEN', title: 'FULL CITIZEN', desc: 'Unlocked 12 or more achievements.', icon: '★', color: '#ffcc00' },
 };
 
 // ── Context ───────────────────────────────────────────────────────
@@ -52,7 +64,7 @@ export function AchievementProvider({ children }) {
             setTimeout(() => setToasts(t => t.filter(x => x.tid !== tid)), 4500);
 
             // Check FULL_CITIZEN
-            if (Object.keys(next).length >= 5 && !next.FULL_CITIZEN) {
+            if (Object.keys(next).length >= 12 && !next.FULL_CITIZEN) {
                 setTimeout(() => unlock('FULL_CITIZEN'), 600);
             }
             return next;
@@ -65,6 +77,54 @@ export function AchievementProvider({ children }) {
     useEffect(() => {
         const t = setTimeout(() => unlock('VOID_WALKER'), 2000);
         return () => clearTimeout(t);
+    }, [unlock]);
+
+    // NIGHT_OWL: if visiting after midnight
+    useEffect(() => {
+        const hour = new Date().getHours();
+        if (hour >= 0 && hour < 5) {
+            setTimeout(() => unlock('NIGHT_OWL'), 3000);
+        }
+    }, [unlock]);
+
+    // CRYPTO_WATCHER: after 30s on page
+    useEffect(() => {
+        const t = setTimeout(() => unlock('CRYPTO_WATCHER'), 30000);
+        return () => clearTimeout(t);
+    }, [unlock]);
+
+    // SPEED_RUNNER: track nav clicks
+    const navTimes = useRef([]);
+    const trackNav = useCallback(() => {
+        const now = Date.now();
+        navTimes.current = [...navTimes.current.filter(t => now - t < 60000), now];
+        if (navTimes.current.length >= 3) unlock('SPEED_RUNNER');
+    }, [unlock]);
+    // Expose trackNav via a custom event
+    useEffect(() => {
+        const handler = () => trackNav();
+        window.addEventListener('gtech:nav', handler);
+        return () => window.removeEventListener('gtech:nav', handler);
+    }, [trackNav]);
+
+    // SECTOR_GOD: all sectors visited
+    useEffect(() => {
+        const handler = () => unlock('SECTOR_GOD');
+        window.addEventListener('gtech:all-sectors', handler);
+        return () => window.removeEventListener('gtech:all-sectors', handler);
+    }, [unlock]);
+
+    // DARK_MATTER: dark system theme
+    useEffect(() => {
+        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (isDark) setTimeout(() => unlock('DARK_MATTER'), 3500);
+    }, [unlock]);
+
+    // ECHO_CHAMBER: via custom event from terminal
+    useEffect(() => {
+        const handler = () => unlock('ECHO_CHAMBER');
+        window.addEventListener('gtech:echo', handler);
+        return () => window.removeEventListener('gtech:echo', handler);
     }, [unlock]);
 
     const unlockedList = Object.keys(unlocked).map(id => ACHIEVEMENTS[id]).filter(Boolean);
@@ -223,7 +283,7 @@ export function AchievementProvider({ children }) {
                 .tray-prog { font-size: 0.55rem; color: #555; margin-left: auto; }
                 .tray-x { background: transparent; border: none; color: #444; cursor: pointer; font-size: 1rem; }
                 .tray-x:hover { color: #fff; }
-                .tray-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+                .tray-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
                 .tray-badge {
                     border: 1px solid #222;
                     border-radius: 10px;

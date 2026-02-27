@@ -2,13 +2,14 @@
 import React from 'react';
 
 /**
- * AvatarBody — Full humanoid SVG avatar for CyberBuddy.
- * Props:
- *   moodColor: string (hex)
- *   isGlitching: bool
- *   isTalking: bool
- *   isWalking: bool  ← NEW: triggers walking leg/arm animation
- *   scale: number    ← NEW: for ghost mode rendering
+ * BuddyBody — Advanced humanoid SVG avatar for CyberBuddy.
+ * Featuring:
+ * - Richer head & visor with hex panels and expressions
+ * - Circuit board torso with animated data pulses
+ * - Segmented robotic hands/claws
+ * - Thruster exhaust jets (Tier 6+)
+ * - Shoulder spike plating (Tier 5+)
+ * - Shimmering holographic overlay
  */
 export default function BuddyBody({
     moodColor = '#00f2ff',
@@ -16,268 +17,280 @@ export default function BuddyBody({
     isTalking = false,
     isWalking = false,
     scale = 1,
+    level = 1,
 }) {
     const w = Math.round(90 * scale);
     const h = Math.round(144 * scale);
 
+    // Tier flags
+    const isElite = level >= 5;
+    const isGold = level >= 6;
+    const isFire = level >= 8;
+    const isRainbow = level >= 10;
+
+    const trimColor = isRainbow ? '#bc13fe' : isGold ? '#ffcc00' : moodColor;
+
     return (
         <div
-            className={`avatar-root ${isGlitching ? 'glitch' : ''} ${isWalking ? 'walking' : 'idle'}`}
-            style={{ width: w, height: h }}
+            className={`buddy-body-root ${isGlitching ? 'glitch' : ''} ${isWalking ? 'walking' : 'idle'} ${isGold ? 'lvl-gold' : ''} ${isFire ? 'lvl-fire' : ''} ${isRainbow ? 'lvl-rainbow' : ''}`}
+            style={{ width: w, height: h, position: 'relative' }}
             aria-label="CyberBuddy Avatar"
         >
+            {/* Level badge */}
+            {level > 1 && (
+                <div className="lvl-badge" style={{ background: trimColor, boxShadow: `0 0 10px ${trimColor}` }}>
+                    LVL {level}
+                </div>
+            )}
+
             <svg
-                viewBox="0 0 100 160"
+                viewBox="0 -10 100 170"
                 width={w}
-                height={h}
+                height={h + 10}
                 xmlns="http://www.w3.org/2000/svg"
                 style={{ overflow: 'visible' }}
             >
                 <defs>
-                    <filter id={`gf-${moodColor.replace('#', '')}`}>
-                        <feGaussianBlur stdDeviation="1.5" result="blur" />
-                        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                    </filter>
                     <linearGradient id="body-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor={moodColor} stopOpacity="0.3" />
+                        <stop offset="0%" stopColor={moodColor} stopOpacity="0.25" />
                         <stop offset="100%" stopColor={moodColor} stopOpacity="0.05" />
                     </linearGradient>
+
                     <linearGradient id="visor-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor={moodColor} stopOpacity="0.9" />
-                        <stop offset="100%" stopColor={moodColor} stopOpacity="0.15" />
+                        <stop offset="0%" stopColor={moodColor} stopOpacity="0.95" />
+                        <stop offset="100%" stopColor={moodColor} stopOpacity="0.2" />
                     </linearGradient>
+
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
+                        <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+
+                    <pattern id="hex-grid" width="8" height="14" patternUnits="userSpaceOnUse" patternTransform="scale(0.5)">
+                        <path d="M4 0 L8 2 L8 7 L4 9 L0 7 L0 2 Z" fill="none" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.3" />
+                    </pattern>
+
+                    {/* Mask for data pulses */}
+                    <mask id="torso-mask">
+                        <rect x="26" y="68" width="48" height="52" rx="8" fill="white" />
+                    </mask>
                 </defs>
+
+                {/* === BACK LAYER (Wings/Thrusters) === */}
+                {isGold && (
+                    <g className="thrusters">
+                        {/* Boosters behind legs */}
+                        <path d="M30,146 L37,165 L44,146 Z" fill={moodColor} fillOpacity="0.6" className="jet-flame">
+                            <animate attributeName="opacity" values="0.4;0.9;0.4" dur="0.1s" repeatCount="indefinite" />
+                        </path>
+                        <path d="M56,146 L63,165 L70,146 Z" fill={moodColor} fillOpacity="0.6" className="jet-flame">
+                            <animate attributeName="opacity" values="0.4;0.9;0.4" dur="0.1s" repeatCount="indefinite" />
+                        </path>
+                    </g>
+                )}
 
                 {/* === LEGS === */}
                 <g className={isWalking ? 'walk-legs' : 'idle-legs'}>
-                    {/* Left leg */}
                     <g className="leg-l-group">
-                        <rect x="30" y="118" width="14" height="28" rx="4"
-                            fill="url(#body-grad)" stroke={moodColor} strokeWidth="1.5" />
-                        <rect x="26" y="142" width="20" height="8" rx="3"
-                            fill={moodColor} fillOpacity="0.5" stroke={moodColor} strokeWidth="1" />
+                        <rect x="30" y="118" width="14" height="28" rx="4" fill="url(#body-grad)" stroke={moodColor} strokeWidth="1.5" />
+                        <rect x="25" y="142" width="22" height="6" rx="2" fill={moodColor} fillOpacity="0.4" />
+                        {/* Circuit trace on leg */}
+                        <path d="M37,118 V140" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.3" fill="none" />
                     </g>
-                    {/* Right leg */}
                     <g className="leg-r-group">
-                        <rect x="56" y="118" width="14" height="28" rx="4"
-                            fill="url(#body-grad)" stroke={moodColor} strokeWidth="1.5" />
-                        <rect x="54" y="142" width="20" height="8" rx="3"
-                            fill={moodColor} fillOpacity="0.5" stroke={moodColor} strokeWidth="1" />
+                        <rect x="56" y="118" width="14" height="28" rx="4" fill="url(#body-grad)" stroke={moodColor} strokeWidth="1.5" />
+                        <rect x="53" y="142" width="22" height="6" rx="2" fill={moodColor} fillOpacity="0.4" />
+                        <path d="M63,118 V140" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.3" fill="none" />
                     </g>
                 </g>
 
                 {/* === TORSO === */}
-                <rect x="26" y="68" width="48" height="52" rx="8"
-                    fill="url(#body-grad)" stroke={moodColor} strokeWidth="2" />
-                {/* Grid lines */}
-                <line x1="50" y1="70" x2="50" y2="118" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.25" />
-                <line x1="27" y1="88" x2="73" y2="88" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.25" />
-                <line x1="27" y1="104" x2="73" y2="104" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.25" />
+                <rect x="26" y="68" width="48" height="52" rx="8" fill="url(#body-grad)" stroke={moodColor} strokeWidth="2" />
 
-                {/* Chest core */}
-                <circle cx="50" cy="88" r="8" fill="none" stroke={moodColor} strokeWidth="1.5" className="chest-ring" />
-                <circle cx="50" cy="88" r="4" fill={moodColor} fillOpacity="0.85" className="chest-core" />
-                {/* Chest circuit dots */}
-                <circle cx="36" cy="79" r="2" fill={moodColor} fillOpacity="0.5" />
-                <circle cx="64" cy="79" r="2" fill={moodColor} fillOpacity="0.5" />
-                <line x1="36" y1="79" x2="42" y2="88" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.4" />
-                <line x1="64" y1="79" x2="58" y2="88" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.4" />
-                {/* Belt */}
-                <rect x="26" y="108" width="48" height="6" rx="2" fill={moodColor} fillOpacity="0.2" stroke={moodColor} strokeWidth="1" />
-                <rect x="46" y="108" width="8" height="6" rx="1" fill={moodColor} fillOpacity="0.5" />
+                {/* Circuit Traces */}
+                <g className="circuit-traces" mask="url(#torso-mask)">
+                    <path d="M26,80 H40 V96 H26" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.2" fill="none" />
+                    <path d="M74,80 H60 V96 H74" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.2" fill="none" />
+                    <path d="M50,68 V80" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.2" fill="none" />
+                    <path d="M50,96 V120" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.2" fill="none" />
+
+                    {/* Animated Pulses */}
+                    <circle r="1" fill={moodColor} className="data-pulse-1">
+                        <animateMotion path="M50,68 V80" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                    <circle r="1" fill={moodColor} className="data-pulse-2">
+                        <animateMotion path="M74,80 H60 V96" dur="3s" repeatCount="indefinite" />
+                    </circle>
+                </g>
+
+                {/* Elite Plating (Shoulder Spikes) */}
+                {isElite && (
+                    <g className="elite-plating">
+                        <path d="M22,70 L14,60 L26,66 Z" fill={moodColor} stroke={moodColor} strokeWidth="1" />
+                        <path d="M78,70 L86,60 L74,66 Z" fill={moodColor} stroke={moodColor} strokeWidth="1" />
+                    </g>
+                )}
+
+                {/* Chest Core */}
+                <circle cx="50" cy="88" r="9" fill="none" stroke={moodColor} strokeWidth="1" strokeDasharray="2,2" className="rotating-ring" />
+                <circle cx="50" cy="88" r="5" fill={moodColor} className="core-glow" />
 
                 {/* === ARMS === */}
                 <g className={isWalking ? 'walk-arms' : 'idle-arms'}>
-                    {/* Left arm */}
                     <g className="arm-l-group">
-                        <rect x="10" y="70" width="14" height="40" rx="6"
-                            fill="url(#body-grad)" stroke={moodColor} strokeWidth="1.5" />
-                        <ellipse cx="17" cy="114" rx="7" ry="5" fill={moodColor} fillOpacity="0.4" stroke={moodColor} strokeWidth="1" />
+                        <rect x="10" y="72" width="14" height="36" rx="4" fill="url(#body-grad)" stroke={moodColor} strokeWidth="1.5" />
+                        {/* Hands/Claws */}
+                        <g className="hand-l" transform="translate(10, 108)">
+                            <rect x="0" y="0" width="14" height="6" rx="2" fill={moodColor} fillOpacity="0.3" />
+                            <rect x="1" y="6" width="3" height="6" rx="1.5" fill={moodColor} />
+                            <rect x="5.5" y="7" width="3" height="6" rx="1.5" fill={moodColor} />
+                            <rect x="10" y="6" width="3" height="6" rx="1.5" fill={moodColor} />
+                        </g>
                     </g>
-                    {/* Right arm */}
                     <g className="arm-r-group">
-                        <rect x="76" y="70" width="14" height="40" rx="6"
-                            fill="url(#body-grad)" stroke={moodColor} strokeWidth="1.5" />
-                        <ellipse cx="83" cy="114" rx="7" ry="5" fill={moodColor} fillOpacity="0.4" stroke={moodColor} strokeWidth="1" />
+                        <rect x="76" y="72" width="14" height="36" rx="4" fill="url(#body-grad)" stroke={moodColor} strokeWidth="1.5" />
+                        <g className="hand-r" transform="translate(76, 108)">
+                            <rect x="0" y="0" width="14" height="6" rx="2" fill={moodColor} fillOpacity="0.3" />
+                            <rect x="1" y="6" width="3" height="6" rx="1.5" fill={moodColor} />
+                            <rect x="5.5" y="7" width="3" height="6" rx="1.5" fill={moodColor} />
+                            <rect x="10" y="6" width="3" height="6" rx="1.5" fill={moodColor} />
+                        </g>
                     </g>
                 </g>
 
-                {/* Shoulder pads */}
-                <ellipse cx="22" cy="70" rx="10" ry="6" fill={moodColor} fillOpacity="0.25" stroke={moodColor} strokeWidth="1.5" />
-                <ellipse cx="78" cy="70" rx="10" ry="6" fill={moodColor} fillOpacity="0.25" stroke={moodColor} strokeWidth="1.5" />
-
                 {/* === NECK === */}
-                <rect x="43" y="56" width="14" height="14" rx="4" fill="url(#body-grad)" stroke={moodColor} strokeWidth="1.5" />
+                <path d="M44,56 H56 V68 H44 Z" fill="url(#body-grad)" stroke={moodColor} strokeWidth="1" />
+                <line x1="45" y1="60" x2="55" y2="60" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.3" />
+                <line x1="45" y1="64" x2="55" y2="64" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.3" />
 
                 {/* === HEAD === */}
-                <rect x="22" y="22" width="56" height="38" rx="12"
-                    fill="url(#body-grad)" stroke={moodColor} strokeWidth="2" className="head-bob" />
-                <line x1="22" y1="38" x2="78" y2="38" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.15" />
+                <g className="head-group">
+                    <rect x="22" y="22" width="56" height="38" rx="12" fill="url(#body-grad)" stroke={moodColor} strokeWidth="2" className="head-bob" />
 
-                {/* Antenna */}
-                <line x1="50" y1="22" x2="50" y2="8" stroke={moodColor} strokeWidth="1.5" strokeDasharray="2,2" />
-                <circle cx="50" cy="6" r="3.5" fill={moodColor} className="antenna-tip" />
-                <circle cx="50" cy="6" r="6" fill="none" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.5" className="antenna-ring" />
+                    {/* VISOR */}
+                    <rect x="26" y="26" width="48" height="18" rx="6" fill="#050a10" stroke={moodColor} strokeWidth="0.5" />
+                    <rect x="26" y="26" width="48" height="18" rx="6" fill="url(#hex-grid)" opacity="0.6" />
+                    <rect x="26" y="26" width="48" height="2" rx="1" fill={moodColor} fillOpacity="0.4" className="visor-scan" />
 
-                {/* Ear vents */}
-                <rect x="16" y="28" width="6" height="12" rx="2" fill={moodColor} fillOpacity="0.3" stroke={moodColor} strokeWidth="1" />
-                <rect x="78" y="28" width="6" height="12" rx="2" fill={moodColor} fillOpacity="0.3" stroke={moodColor} strokeWidth="1" />
+                    {/* Expressions Layer */}
+                    <g className="visor-eyes" filter="url(#glow)">
+                        {isTalking ? (
+                            <path d="M30,35 Q35,30 40,35 M60,35 Q65,30 70,35" stroke={moodColor} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                        ) : (
+                            <>
+                                <circle cx="37" cy="35" r="3" fill={moodColor} className="eye-pulse" />
+                                <circle cx="63" cy="35" r="3" fill={moodColor} className="eye-pulse" />
+                                <circle cx="38" cy="33.5" r="1" fill="white" fillOpacity="0.8" />
+                                <circle cx="64" cy="33.5" r="1" fill="white" fillOpacity="0.8" />
+                            </>
+                        )}
+                    </g>
 
-                {/* VISOR */}
-                <rect x="26" y="26" width="48" height="16" rx="6" fill="url(#visor-grad)" />
-                <rect x="26" y="26" width="48" height="3" rx="2" fill={moodColor} fillOpacity="0.3" className="visor-scan" />
+                    <rect x="38" y="48" width="24" height="4" rx="2" fill={moodColor} fillOpacity="0.2" />
+                    <path d="M40,50 H60" stroke={moodColor} strokeWidth="1" strokeOpacity="0.5" strokeDasharray="2,2" />
 
-                {/* Eyes */}
-                <ellipse cx="38" cy="34" rx="6" ry={isTalking ? 2.5 : 4} fill={moodColor} fillOpacity="0.15" />
-                <ellipse cx="62" cy="34" rx="6" ry={isTalking ? 2.5 : 4} fill={moodColor} fillOpacity="0.15" />
-                <ellipse cx="38" cy="34" rx="3" ry={isTalking ? 1.5 : 3} fill={moodColor} className="eye-l" />
-                <ellipse cx="62" cy="34" rx="3" ry={isTalking ? 1.5 : 3} fill={moodColor} className="eye-r" />
-                <circle cx="40" cy="32" r="1" fill="#fff" fillOpacity="0.7" />
-                <circle cx="64" cy="32" r="1" fill="#fff" fillOpacity="0.7" />
+                    {/* Antenna */}
+                    <line x1="38" y1="22" x2="32" y2="10" stroke={moodColor} strokeWidth="1.5" />
+                    <circle cx="32" cy="10" r="2.5" fill={moodColor} className="antenna-glow" />
+                </g>
 
-                {/* Mouth / speaker */}
-                <rect x="34" y="46" width="32" height="8" rx="4" fill="none" stroke={moodColor} strokeWidth="1" strokeOpacity="0.4" />
-                {[38, 42, 46, 50, 54, 58, 62].map((x, i) => (
-                    <rect key={x} x={x} y="47" width="1.5"
-                        height={isTalking ? (i % 2 === 0 ? 6 : 4) : 3}
-                        rx="1" fill={moodColor}
-                        fillOpacity={isTalking ? 0.9 : 0.35}
-                        className={isTalking ? `mouth-bar-${i}` : ''}
-                    />
-                ))}
+                {/* === AURA LAYERS === */}
+                <circle cx="50" cy="80" r="60" fill="none" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.05" className="aura-pulse" />
+                {isRainbow && (
+                    <circle cx="50" cy="80" r="70" fill="none" stroke="url(#rainbow-grad)" strokeWidth="1" strokeOpacity="0.3" className="rainbow-aura" />
+                )}
 
-                {/* Aura rings */}
-                <circle cx="50" cy="80" r="55" fill="none" stroke={moodColor} strokeWidth="0.5" strokeOpacity="0.06" className="aura-1" />
-                <circle cx="50" cy="80" r="66" fill="none" stroke={moodColor} strokeWidth="0.3" strokeOpacity="0.04" className="aura-2" />
+                {/* Shimmer Overlay */}
+                <rect x="20" y="20" width="60" height="130" fill="white" fillOpacity="0.03" className="shimmer-sweep" pointerEvents="none" />
+
+                <defs>
+                    <linearGradient id="rainbow-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#ff0000" />
+                        <stop offset="20%" stopColor="#ffff00" />
+                        <stop offset="40%" stopColor="#00ff00" />
+                        <stop offset="60%" stopColor="#0000ff" />
+                        <stop offset="80%" stopColor="#ff00ff" />
+                        <stop offset="100%" stopColor="#ff0000" />
+                    </linearGradient>
+                </defs>
             </svg>
 
             <style jsx>{`
-                .avatar-root {
-                    position: relative;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-                /* IDLE FLOAT */
-                .avatar-root.idle {
-                    animation: buddy-float 3s ease-in-out infinite;
-                }
+                .buddy-body-root { transition: all 0.3s ease; }
+                
+                /* Animations */
+                .idle { animation: buddy-float 4s ease-in-out infinite; }
                 @keyframes buddy-float {
                     0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-8px); }
-                }
-                /* GLITCH */
-                .avatar-root.glitch svg {
-                    animation: glitch-fx 0.12s infinite;
-                    filter: hue-rotate(90deg) saturate(2);
-                }
-                @keyframes glitch-fx {
-                    0% { transform: translate(0); }
-                    25% { transform: translate(-4px, 2px) skewX(1.5deg); }
-                    50% { transform: translate(4px, -2px) skewX(-1.5deg); }
-                    75% { transform: translate(-2px, -1px); }
-                    100% { transform: translate(0); }
+                    50% { transform: translateY(-10px); }
                 }
 
-                /* === WALKING ANIMATIONS === */
-                /* Leg walk */
-                .walk-legs .leg-l-group {
-                    animation: leg-walk-l 0.5s ease-in-out infinite alternate;
-                    transform-origin: 37px 118px;
-                }
-                .walk-legs .leg-r-group {
-                    animation: leg-walk-r 0.5s ease-in-out infinite alternate;
-                    transform-origin: 63px 118px;
-                }
-                @keyframes leg-walk-l {
-                    from { transform: rotate(-18deg); }
-                    to { transform: rotate(18deg); }
-                }
-                @keyframes leg-walk-r {
-                    from { transform: rotate(18deg); }
-                    to { transform: rotate(-18deg); }
-                }
-                /* Arm swing (opposite to legs) */
-                .walk-arms .arm-l-group {
-                    animation: arm-swing-l 0.5s ease-in-out infinite alternate;
-                    transform-origin: 17px 70px;
-                }
-                .walk-arms .arm-r-group {
-                    animation: arm-swing-r 0.5s ease-in-out infinite alternate;
-                    transform-origin: 83px 70px;
-                }
-                @keyframes arm-swing-l {
-                    from { transform: rotate(12deg); }
-                    to { transform: rotate(-12deg); }
-                }
-                @keyframes arm-swing-r {
-                    from { transform: rotate(-12deg); }
-                    to { transform: rotate(12deg); }
-                }
-                /* Torso bob when walking */
-                .avatar-root.walking {
-                    animation: walk-bob 0.5s ease-in-out infinite alternate;
-                }
+                .walking { animation: walk-bob 0.6s ease-in-out infinite alternate; }
                 @keyframes walk-bob {
-                    from { transform: translateY(0px); }
-                    to { transform: translateY(4px); }
+                    from { transform: translateY(0); }
+                    to { transform: translateY(6px); }
                 }
 
-                /* === IDLE ANIMATIONS === */
-                .idle-legs .leg-l-group { animation: leg-idle-l 3s ease-in-out infinite; transform-origin: 37px 118px; }
-                .idle-legs .leg-r-group { animation: leg-idle-r 3s ease-in-out 0.2s infinite; transform-origin: 63px 118px; }
-                @keyframes leg-idle-l { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(2deg); } }
-                @keyframes leg-idle-r { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-2deg); } }
-                .idle-arms .arm-l-group { animation: arm-sway-l 3s ease-in-out infinite; transform-origin: 17px 70px; }
-                .idle-arms .arm-r-group { animation: arm-sway-r 3s ease-in-out infinite; transform-origin: 83px 70px; }
-                @keyframes arm-sway-l { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-5deg); } }
-                @keyframes arm-sway-r { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(5deg); } }
+                .glitch { animation: glitch 0.2s steps(2) infinite; filter: hue-rotate(45deg); }
+                @keyframes glitch {
+                    0% { transform: translate(1px, 1px); }
+                    100% { transform: translate(-1px, -1px); }
+                }
 
-                /* Chest */
-                .chest-core { animation: chest-pulse 2s ease-in-out infinite; transform-origin: 50px 88px; }
-                .chest-ring { animation: chest-ring-spin 6s linear infinite; transform-origin: 50px 88px; }
-                @keyframes chest-pulse { 0%, 100% { opacity: 0.85; transform: scale(1); } 50% { opacity: 1; transform: scale(1.4); } }
-                @keyframes chest-ring-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                .walk-legs .leg-l-group { animation: leg-swing-l 0.6s ease-in-out infinite alternate; transform-origin: 37px 118px; }
+                .walk-legs .leg-r-group { animation: leg-swing-r 0.6s ease-in-out infinite alternate; transform-origin: 63px 118px; }
+                @keyframes leg-swing-l { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
+                @keyframes leg-swing-r { from { transform: rotate(25deg); } to { transform: rotate(-25deg); } }
 
-                /* Eyes */
-                .eye-l, .eye-r { animation: eye-blink 4.5s ease-in-out infinite; }
-                .eye-r { animation-delay: 0.12s; }
-                @keyframes eye-blink { 0%, 88%, 100% { ry: 3; } 93% { ry: 0.5; } }
+                .walk-arms .arm-l-group { animation: arm-swing-l 0.6s ease-in-out infinite alternate; transform-origin: 17px 72px; }
+                .walk-arms .arm-r-group { animation: arm-swing-r 0.6s ease-in-out infinite alternate; transform-origin: 83px 72px; }
+                @keyframes arm-swing-l { from { transform: rotate(15deg); } to { transform: rotate(-15deg); } }
+                @keyframes arm-swing-r { from { transform: rotate(-15deg); } to { transform: rotate(15deg); } }
 
-                /* Antenna */
-                .antenna-tip { animation: antenna-pulse 1.8s ease-in-out infinite; }
-                .antenna-ring { animation: antenna-ring-pulse 1.8s ease-in-out infinite; }
-                @keyframes antenna-pulse { 0%, 100% { r: 3.5; opacity: 1; } 50% { r: 5; opacity: 0.5; } }
-                @keyframes antenna-ring-pulse { 0%, 100% { r: 6; opacity: 0.5; } 50% { r: 11; opacity: 0; } }
+                .visor-scan { animation: visor-scan 3s linear infinite; }
+                @keyframes visor-scan { 0% { transform: translateY(0); opacity: 0; } 50% { opacity: 0.6; } 100% { transform: translateY(16px); opacity: 0; } }
 
-                /* Head bob */
-                .head-bob { animation: head-tilt 4s ease-in-out infinite; transform-origin: 50px 41px; }
-                @keyframes head-tilt { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-1.5deg); } 75% { transform: rotate(1.5deg); } }
+                .eye-pulse { animation: eye-pulse 5s ease-in-out infinite; transform-origin: center; }
+                @keyframes eye-pulse { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
 
-                /* Visor scan */
-                .visor-scan { animation: visor-scan 2.5s linear infinite; }
-                @keyframes visor-scan { 0% { transform: translateY(0); opacity: 0.7; } 100% { transform: translateY(13px); opacity: 0; } }
+                .rotating-ring { animation: rotate 8s linear infinite; transform-origin: 50px 88px; }
+                @keyframes rotate { from { transform: rotate(0); } to { transform: rotate(360deg); } }
 
-                /* Mouth bars when talking */
-                .mouth-bar-0 { animation: mb0 0.18s ease infinite alternate; }
-                .mouth-bar-1 { animation: mb1 0.28s ease infinite alternate; }
-                .mouth-bar-2 { animation: mb2 0.14s ease infinite alternate; }
-                .mouth-bar-3 { animation: mb3 0.22s ease infinite alternate; }
-                .mouth-bar-4 { animation: mb4 0.19s ease infinite alternate; }
-                .mouth-bar-5 { animation: mb5 0.16s ease infinite alternate; }
-                .mouth-bar-6 { animation: mb6 0.25s ease infinite alternate; }
-                @keyframes mb0 { from { height: 1px; } to { height: 6px; } }
-                @keyframes mb1 { from { height: 2px; } to { height: 5px; } }
-                @keyframes mb2 { from { height: 1px; } to { height: 7px; } }
-                @keyframes mb3 { from { height: 3px; } to { height: 6px; } }
-                @keyframes mb4 { from { height: 1px; } to { height: 5px; } }
-                @keyframes mb5 { from { height: 2px; } to { height: 6px; } }
-                @keyframes mb6 { from { height: 1px; } to { height: 4px; } }
+                .core-glow { animation: core-pulse 2s ease-in-out infinite; transform-origin: 50px 88px; }
+                @keyframes core-pulse { 0%, 100% { r: 5; opacity: 0.8; } 50% { r: 7; opacity: 1; filter: blur(1px); } }
 
-                /* Aura */
-                .aura-1 { animation: aura-exp 4.5s ease-in-out infinite; transform-origin: 50px 80px; }
-                .aura-2 { animation: aura-exp 4.5s ease-in-out 1.2s infinite; transform-origin: 50px 80px; }
-                @keyframes aura-exp { 0%, 100% { opacity: 0.06; transform: scale(1); } 50% { opacity: 0; transform: scale(1.12); } }
+                .jet-flame { transform-origin: 50% 146px; animation: flame-burst 0.2s ease-in-out infinite alternate; }
+                @keyframes flame-burst { from { transform: scaleY(1); } to { transform: scaleY(1.3); } }
+
+                .shimmer-sweep { animation: shimmer 4s linear infinite; }
+                @keyframes shimmer { 0% { transform: translateX(-100%) skewX(-20deg); } 100% { transform: translateX(200%) skewX(-20deg); } }
+
+                .aura-pulse { animation: aura-pulse 3s ease-out infinite; transform-origin: 50px 80px; }
+                @keyframes aura-pulse { 0% { transform: scale(1); opacity: 0.1; } 100% { transform: scale(1.3); opacity: 0; } }
+
+                .antenna-glow { animation: blink 1s step-end infinite; }
+                @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0.3; } }
+
+                /* Tier Styles */
+                .lvl-gold { filter: drop-shadow(0 0 4px #ffcc0066); }
+                .lvl-fire { filter: drop-shadow(0 0 8px #ff660088); }
+                .lvl-rainbow { filter: drop-shadow(0 0 10px #bc13fe88); }
+                
+                .lvl-badge {
+                    position: absolute;
+                    top: -24px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    padding: 2px 10px;
+                    border-radius: 4px;
+                    font-size: 0.45rem;
+                    font-weight: bold;
+                    color: #000;
+                    letter-spacing: 1px;
+                }
             `}</style>
         </div>
     );

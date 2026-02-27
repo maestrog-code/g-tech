@@ -5,6 +5,9 @@ import CitizenRegistry from '@/components/CitizenRegistry';
 import CyberBuddy from '@/components/CyberBuddy';
 import ParticleNetwork from '@/components/ParticleNetwork';
 import BootSequence from '@/components/BootSequence';
+import CursorTrail from '@/components/CursorTrail';
+import MoodOrb from '@/components/MoodOrb';
+import SectorHUD from '@/components/SectorHUD';
 import { AchievementProvider } from '@/components/AchievementSystem';
 
 export const metadata = {
@@ -21,6 +24,8 @@ export default function RootLayout({ children }) {
     return (
         <html lang="en" suppressHydrationWarning>
             <body suppressHydrationWarning>
+                {/* Cursor trail — topmost layer */}
+                <CursorTrail />
                 {/* Ambient layer — behind everything */}
                 <ParticleNetwork />
                 {/* Boot sequence — plays once per session */}
@@ -30,6 +35,8 @@ export default function RootLayout({ children }) {
                         <SectorNavigator />
                         <CitizenRegistry />
                         <CyberBuddy />
+                        <SectorHUD />
+                        <MoodOrb />
                         {children}
                         <BackgroundAudio />
                     </div>
