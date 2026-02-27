@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getNewsCache, setNewsCache, cleanExpiredCache } from '@/lib/supabase';
 
 const CATEGORIES = {
     AI: ['ai', 'machine learning', 'gpt', 'neural', 'llm', 'deep learning', 'openai', 'anthropic', 'gemini', 'model', 'artificial intelligence'],
@@ -30,6 +31,18 @@ export async function GET(req) {
     const limit = parseInt(searchParams.get('limit') || '20');
 
     try {
+        cleanExpiredCache().catch(() => {});
+
+        const cacheKey = query || 'ALL';
+        const cached = await getNewsCache(cacheKey);
+
+        if (cached && cached.data) {
+            return NextResponse.json({
+                ...cached.data,
+                cached: true,
+                fetchedAt: new Date(cached.fetched_at).getTime(),
+            });
+        }
         // Fetch top AND new stories for diversity
         const [topRes, newRes] = await Promise.all([
             fetch('https://hacker-news.firebaseio.com/v0/topstories.json', { next: { revalidate: 300 } }),
@@ -77,12 +90,16 @@ export async function GET(req) {
             category: detectCategory(s.title),
         }));
 
-        return NextResponse.json({
+        const response = {
             items: result,
             fetchedAt: Date.now(),
             source: 'HACKER NEWS NEURAL UPLINK',
             count: result.length,
-        });
+        };
+
+        setNewsCache(cacheKey, response).catch(() => {});
+
+        return NextResponse.json(response);
     } catch (err) {
         console.error('Tech Brain fetch error:', err);
         return NextResponse.json({
